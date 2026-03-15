@@ -40,11 +40,13 @@ The client who originally sent the message does **not receive its own broadcast*
 ---
 
 ## Message Handling and Network I/O
+Because TCP is a stream-oriented protocol and does not preserve message boundaries, the server accumulates incoming bytes until a newline character (`\n`) is received before treating the data as a complete message.
+
 Network programs cannot assume that a single `recv()` call returns an entire message. The server therefore correctly handles:
 
-- **Partial reads**
-- **Multiple messages received in a single read**
-- **Messages arriving in fragments**
+- Partial reads
+- Multiple messages received in a single read
+- Messages arriving in fragments
 
 Incoming bytes are stored in an accumulation buffer until a newline character is detected. Only then is the message considered complete and broadcast to other clients.
 
