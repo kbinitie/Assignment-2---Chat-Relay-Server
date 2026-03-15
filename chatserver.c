@@ -200,7 +200,7 @@ int main(int argc, char* argv[]){
 
     port = atoi(argv[1]);
 
-    if (port <= 0) {
+    if (port < 1 || port > 65535) {
         printf("Invalid port\n");
         return -1;
     }
