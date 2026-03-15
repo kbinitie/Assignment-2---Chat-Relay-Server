@@ -7,7 +7,6 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-
 #define MAX_CLIENTS 20
 #define MAX_MSG_LEN 512
 #define RECV_BUF_SIZE 1024
@@ -38,12 +37,13 @@ int next_client_id = 1; // increment when new client connects
 // func prototypes
 int send_all(int sockfd, const char *buf, int len);
 void *client_thread(void *arg);
-void add_client(int sockfd, int client_id, pthread_t tid);
+int add_client(int sockfd, int client_id, pthread_t tid);
 void remove_client(int sockfd);
 void broadcast_message(int sender_sockfd, int sender_id, const char *msg);
 
-void add_client(int sockfd, int client_id, pthread_t tid)
+int add_client(int sockfd, int client_id, pthread_t tid)
 {
+    int added = 0;
     pthread_mutex_lock(&clients_mutex);
 
     for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -52,11 +52,13 @@ void add_client(int sockfd, int client_id, pthread_t tid)
             clients[i].client_id = client_id;
             clients[i].tid = tid;
             clients[i].active = 1;
+            added = 1;
             break;
         }
     }
 
     pthread_mutex_unlock(&clients_mutex);
+    return added;
 }
 
 void remove_client(int sockfd)
@@ -284,8 +286,11 @@ int main(int argc, char* argv[]){
             continue;
         }
 
-        // add client to active client list
-        add_client(client_fd, client_id, tid);
+        if (!add_client(client_fd, client_id, tid)) {
+            printf("Server full, rejecting client %d\n", client_id);
+            close(client_fd);
+            continue;
+        }
 
         // for thread to clean up its own resources when done
         pthread_detach(tid);
