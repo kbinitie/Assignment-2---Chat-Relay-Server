@@ -30,7 +30,7 @@ client_t clients[MAX_CLIENTS];
 // need mutex; protect shared client list since multiple threads may access it at same time?
 pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int next _client_id = 1; // increment when new client connects
+int next_client_id = 1; // increment when new client connects
 
 // func prototypes
 void *client_thread(void *arg);
