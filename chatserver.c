@@ -116,12 +116,37 @@ void broadcast_message(int sender_sockfd, int sender_id, const char *msg)
 void *client_thread(void *arg)
 {
     thread_arg_t *info = (thread_arg_t *)arg;
+    int sockfd = info->sockfd;
+    int client_id = info->client_id;
 
-    printf("Client %d thread started\n", info->client_id);
+    char buffer[MAX_MSG_LEN + 1];
+    int n;
 
-    // placeholder for now will fix later 
-    close(info->sockfd);
+    printf("Client %d thread started\n", client_id);
+
     free(info);
+
+    while (1) {
+        n = recv(sockfd, buffer, MAX_MSG_LEN, 0);
+
+        if (n == 0) {
+            printf("Client %d disconnected\n", client_id);
+            break;
+        }
+
+        if (n < 0) {
+            perror("recv");
+            break;
+        }
+
+        buffer[n] = '\0';
+
+        // simple broadcast. TODO: replace w/ newline-based message handling
+        broadcast_message(sockfd, client_id, buffer);
+    }
+
+    remove_client(sockfd);
+    close(sockfd);
 
     return NULL;
 }
