@@ -5,6 +5,38 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
+
+#define MAX_CLIENTS 20
+#define MAX_MSG_LEN 512
+
+// client_t: store info about connected client
+typedef struct {
+    int sockfd;
+    int client_id;
+    int active; // 1 if slot in use otherwise 0
+    pthread_t tid;
+} client_t;
+
+// thread_arg_t: to pass data into each client thread
+typedef struct {
+    int sockfd;
+    int client_id;
+} thread_arg_t;
+
+// global client list storing all active clients
+client_t clients[MAX_CLIENTS];
+
+// need mutex; protect shared client list since multiple threads may access it at same time?
+pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int next _client_id = 1; // increment when new client connects
+
+// func prototypes
+void *client_thread(void *arg);
+void add_client(int sockfd, int client_id, pthread_t tid);
+void remove_client(int sockfd);
+void broadcast_message(int sender_sockfd, int sender_id, const char *msg);
 
 int main(int argc, char* argv[]){
     int server_fd;
