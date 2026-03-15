@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define MAX_CLIENTS 2
+#define MAX_CLIENTS 20
 #define MAX_MSG_LEN 512
 #define RECV_BUF_SIZE 1024
 #define ACCUM_BUF_SIZE 2048
