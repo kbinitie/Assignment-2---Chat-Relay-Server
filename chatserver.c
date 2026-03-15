@@ -33,6 +33,7 @@ pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 int next_client_id = 1; // increment when new client connects
 
 // func prototypes
+int send_all(int sockfd, const char *buf, int len);
 void *client_thread(void *arg);
 void add_client(int sockfd, int client_id, pthread_t tid);
 void remove_client(int sockfd);
@@ -65,6 +66,47 @@ void remove_client(int sockfd)
             clients[i].client_id = -1;
             clients[i].active = 0;
             break;
+        }
+    }
+
+    pthread_mutex_unlock(&clients_mutex);
+}
+
+int send_all(int sockfd, const char *buf, int len)
+{
+    int total_sent = 0;
+    int n;
+
+    while (total_sent < len) {
+        n = send(sockfd, buf + total_sent, len - total_sent, 0);
+
+        if (n <= 0) {
+            return -1;
+        }
+
+        total_sent += n;
+    }
+
+    return 0;
+}
+
+void broadcast_message(int sender_sockfd, int sender_id, const char *msg)
+{
+    char outbuf[MAX_MSG_LEN + 32];
+    int outlen;
+
+    // required format is : <client_id>: <message>\n
+    outlen = snprintf(outbuf, sizeof(outbuf), "%d: %s\n", sender_id, msg);
+
+    if (outlen <= 0) {
+        return;
+    }
+
+    pthread_mutex_lock(&clients_mutex);
+
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].active == 1 && clients[i].sockfd != sender_sockfd) {
+            send_all(clients[i].sockfd, outbuf, outlen);
         }
     }
 
