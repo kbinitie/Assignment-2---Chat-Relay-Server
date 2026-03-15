@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+
 #define MAX_CLIENTS 20
 #define MAX_MSG_LEN 512
 #define RECV_BUF_SIZE 1024
@@ -202,6 +203,13 @@ int main(int argc, char* argv[]){
     if (port <= 0) {
         printf("Invalid port\n");
         return -1;
+    }
+
+    // initialize client list
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        clients[i].sockfd = -1;
+        clients[i].client_id = -1;
+        clients[i].active = 0;
     }
 
     // creating a TCP socket w/ IPv4
