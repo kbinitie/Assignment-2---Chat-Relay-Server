@@ -1,4 +1,4 @@
-# SP26 CPSC 380 Programming Assignment 2 – Multi-Client Chat Server
+# SP26 CPSC 380 Programming Assignment 2 – Multi-Client Chat Server Using Threads and Sockets
 
 ## Contributors
 Brent Matthew Ortizo  
