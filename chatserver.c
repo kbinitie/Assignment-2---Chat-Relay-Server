@@ -9,6 +9,8 @@
 
 #define MAX_CLIENTS 20
 #define MAX_MSG_LEN 512
+#define RECV_BUF_SIZE 1024
+#define ACCUM_BUF_SIZE 2048
 
 // client_t: store info about connected client
 typedef struct {
@@ -119,7 +121,10 @@ void *client_thread(void *arg)
     int sockfd = info->sockfd;
     int client_id = info->client_id;
 
-    char buffer[MAX_MSG_LEN + 1];
+    char recvbuf[RECV_BUF_SIZE];
+    char msgbuf[ACCUM_BUF_SIZE];
+    int msg_len = 0;
+    int discard_mode = 0;
     int n;
 
     printf("Client %d thread started\n", client_id);
@@ -127,7 +132,7 @@ void *client_thread(void *arg)
     free(info);
 
     while (1) {
-        n = recv(sockfd, buffer, MAX_MSG_LEN, 0);
+        n = recv(sockfd, recvbuf, sizeof(recvbuf), 0);
 
         if (n == 0) {
             printf("Client %d disconnected\n", client_id);
@@ -139,10 +144,40 @@ void *client_thread(void *arg)
             break;
         }
 
-        buffer[n] = '\0';
+        for (int i = 0; i < n; i++) {
+            char c = recvbuf[i];
 
-        // simple broadcast. TODO: replace w/ newline-based message handling
-        broadcast_message(sockfd, client_id, buffer);
+            // if current message is already too long, ignore everything until a newline appears
+            if (discard_mode == 1) {
+                if (c == '\n') {
+                    discard_mode = 0;
+                    msg_len = 0;
+                }
+                continue;
+            }
+
+            // newline means one complete message is ready
+            if (c == '\n') {
+                msgbuf[msg_len] = '\0';
+
+                if (msg_len > 0) {
+                    broadcast_message(sockfd, client_id, msgbuf);
+                }
+
+                msg_len = 0;
+            }
+            else {
+                if (msg_len < MAX_MSG_LEN) {
+                    msgbuf[msg_len] = c;
+                    msg_len++;
+                }
+                else {
+                    // message exceeded 512 bytes before newline
+                    discard_mode = 1;
+                    msg_len = 0;
+                }
+            }
+        }
     }
 
     remove_client(sockfd);
