@@ -114,7 +114,9 @@ Multiple terminal windows can be opened to simulate multiple chat participants.
 ---
 
 ## Collaboration and References
-This project was implemented individually using **Git** for version control.
+This project was developed collaboratively using **GitHub** for version control.
+
+Brent Ortizo and Kayode Binitie worked together to design the server architecture, implement the threaded client handling, and test the chat server using multiple `nc` clients.
 
 The **man7 Linux manual pages** were used as references for system calls and networking functions including:
 
