@@ -1,6 +1,8 @@
+#include <errno.h>
 #include <stdio.h>        
 #include <stdlib.h>       
 #include <string.h>    
+#include <sys/_types/_ssize_t.h>
 #include <unistd.h>     
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -83,9 +85,13 @@ int send_all(int sockfd, const char *buf, int len)
     while (total_sent < len) {
         n = send(sockfd, buf + total_sent, len - total_sent, 0);
 
-        if (n <= 0) {
+        // Prevent interruptions from breaking sends:
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
             return -1;
         }
+
 
         total_sent += n;
     }
@@ -126,7 +132,7 @@ void *client_thread(void *arg)
     char msgbuf[ACCUM_BUF_SIZE];
     int msg_len = 0;
     int discard_mode = 0;
-    int n;
+    ssize_t n;
 
     printf("Client %d thread started\n", client_id);
 
@@ -236,6 +242,7 @@ int main(int argc, char* argv[]){
     }
 
     // mark socket as a listening socket
+    // Listen queue > MAX_CLIENTS to prevent premature disconnections 
     if (listen(server_fd, 32) < 0) {
         perror("listen");
         close(server_fd);
