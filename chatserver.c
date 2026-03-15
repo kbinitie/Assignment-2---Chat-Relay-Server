@@ -38,6 +38,39 @@ void add_client(int sockfd, int client_id, pthread_t tid);
 void remove_client(int sockfd);
 void broadcast_message(int sender_sockfd, int sender_id, const char *msg);
 
+void add_client(int sockfd, int client_id, pthread_t tid)
+{
+    pthread_mutex_lock(&clients_mutex);
+
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].active == 0) {
+            clients[i].sockfd = sockfd;
+            clients[i].client_id = client_id;
+            clients[i].tid = tid;
+            clients[i].active = 1;
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(&clients_mutex);
+}
+
+void remove_client(int sockfd)
+{
+    pthread_mutex_lock(&clients_mutex);
+
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].active == 1 && clients[i].sockfd == sockfd) {
+            clients[i].sockfd = -1;
+            clients[i].client_id = -1;
+            clients[i].active = 0;
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(&clients_mutex);
+}
+
 int main(int argc, char* argv[]){
     int server_fd;
     int port;
