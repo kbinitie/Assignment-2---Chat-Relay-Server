@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define MAX_CLIENTS 20
+#define MAX_CLIENTS 2
 #define MAX_MSG_LEN 512
 #define RECV_BUF_SIZE 1024
 #define ACCUM_BUF_SIZE 2048
@@ -17,7 +17,6 @@ typedef struct {
     int sockfd;
     int client_id;
     int active; // 1 if slot in use otherwise 0
-    pthread_t tid;
 } client_t;
 
 // thread_arg_t: to pass data into each client thread
@@ -37,11 +36,11 @@ int next_client_id = 1; // increment when new client connects
 // func prototypes
 int send_all(int sockfd, const char *buf, int len);
 void *client_thread(void *arg);
-int add_client(int sockfd, int client_id, pthread_t tid);
+int add_client(int sockfd, int client_id);
 void remove_client(int sockfd);
 void broadcast_message(int sender_sockfd, int sender_id, const char *msg);
 
-int add_client(int sockfd, int client_id, pthread_t tid)
+int add_client(int sockfd, int client_id)
 {
     int added = 0;
     pthread_mutex_lock(&clients_mutex);
@@ -50,7 +49,6 @@ int add_client(int sockfd, int client_id, pthread_t tid)
         if (clients[i].active == 0) {
             clients[i].sockfd = sockfd;
             clients[i].client_id = client_id;
-            clients[i].tid = tid;
             clients[i].active = 1;
             added = 1;
             break;
@@ -278,17 +276,19 @@ int main(int argc, char* argv[]){
         info->sockfd = client_fd;
         info->client_id = client_id;
 
-        // create one thread for this client
-        if (pthread_create(&tid, NULL, client_thread, info) != 0) {
-            perror("pthread_create");
+        if (!add_client(client_fd, client_id)) {
+            printf("Server full, rejecting client %d\n", client_id);
             close(client_fd);
             free(info);
             continue;
         }
 
-        if (!add_client(client_fd, client_id, tid)) {
-            printf("Server full, rejecting client %d\n", client_id);
+        // create one thread for this client
+        if (pthread_create(&tid, NULL, client_thread, info) != 0) {
+            perror("pthread_create");
+            remove_client(client_fd);
             close(client_fd);
+            free(info);
             continue;
         }
 
