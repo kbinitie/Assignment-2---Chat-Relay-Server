@@ -71,6 +71,19 @@ void remove_client(int sockfd)
     pthread_mutex_unlock(&clients_mutex);
 }
 
+void *client_thread(void *arg)
+{
+    thread_arg_t *info = (thread_arg_t *)arg;
+
+    printf("Client %d thread started\n", info->client_id);
+
+    // placeholder for now will fix later 
+    close(info->sockfd);
+    free(info);
+
+    return NULL;
+}
+
 int main(int argc, char* argv[]){
     int server_fd;
     int port;
@@ -121,9 +134,12 @@ int main(int argc, char* argv[]){
 
     printf("Chat server listening on port %d\n", port);
 
-    // just for now, accepting connections and immediately closing them
+    // now accepts clients and create one thread per client
     while (1) {
         int client_fd;
+        int client_id;
+        pthread_t tid;
+        thread_arg_t *info;
 
         client_fd = accept(server_fd, NULL, NULL);
         if (client_fd < 0) {
@@ -131,10 +147,38 @@ int main(int argc, char* argv[]){
             continue;
         }
 
-        printf("Client connected\n");
+        // to assign a unique client ID
+        pthread_mutex_lock(&clients_mutex);
+        client_id = next_client_id;
+        next_client_id++;
+        pthread_mutex_unlock(&clients_mutex);
 
-        // close for now. TODO: add threads later
-        close(client_fd);
+        printf("Client %d connected\n", client_id);
+
+        // need for allocating memory for thread arguments
+        info = malloc(sizeof(thread_arg_t));
+        if (info == NULL) {
+            perror("malloc");
+            close(client_fd);
+            continue;
+        }
+
+        info->sockfd = client_fd;
+        info->client_id = client_id;
+
+        // create one thread for this client
+        if (pthread_create(&tid, NULL, client_thread, info) != 0) {
+            perror("pthread_create");
+            close(client_fd);
+            free(info);
+            continue;
+        }
+
+        // add client to active client list
+        add_client(client_fd, client_id, tid);
+
+        // for thread to clean up its own resources when done
+        pthread_detach(tid);
     }
 
     close(server_fd);
