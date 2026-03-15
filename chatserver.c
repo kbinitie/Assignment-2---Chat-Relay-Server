@@ -236,7 +236,7 @@ int main(int argc, char* argv[]){
     }
 
     // mark socket as a listening socket
-    if (listen(server_fd, 10) < 0) {
+    if (listen(server_fd, 32) < 0) {
         perror("listen");
         close(server_fd);
         return -1;
